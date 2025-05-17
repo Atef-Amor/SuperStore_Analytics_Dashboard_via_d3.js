@@ -1,0 +1,2734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Superstore Advanced Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-array@3"></script>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-light: #6366f1;
+      --primary-dark: #4338ca;
+      --secondary: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --light: #f3f4f6;
+      --dark: #1f2937;
+      --gray: #6b7280;
+      --white: #ffffff;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+    body { 
+      background: linear-gradient(to right, #f8fafc, #e2e8f0); 
+      color: var(--dark); 
+      padding: 1rem;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+    
+    header { 
+      text-align: center; 
+      padding: 1.5rem 0; 
+      margin-bottom: 1rem;
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    
+    h1 { 
+      font-size: 2.5rem; 
+      color: var(--primary-dark); 
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    
+    .header-subtitle {
+      color: var(--gray);
+      font-weight: 400;
+    }
+    
+    .dashboard-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    
+    .filters {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    
+    .filter-group label {
+      font-size: 0.875rem;
+      color: var(--gray);
+      font-weight: 500;
+    }
+    
+    select, .date-range {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: var(--white);
+      color: var(--dark);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    select:hover, .date-range:hover {
+      border-color: var(--primary-light);
+    }
+    
+    select:focus, .date-range:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+    }
+    
+    nav { 
+      display: flex; 
+      justify-content: center; 
+      gap: 1rem; 
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    nav button {
+      padding: 0.7rem 1.5rem;
+      background: var(--primary);
+      border: none;
+      border-radius: 8px;
+      color: white; 
+      font-weight: 600; 
+      font-size: 0.95rem;
+      cursor: pointer; 
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    nav button:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    nav button.active {
+      background: var(--primary-dark);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .page { 
+      display: none; 
+      animation: fadeIn 0.5s ease-in-out forwards; 
+      grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .active { 
+      display: grid; 
+    }
+    
+    .chart-container {
+      padding: 1.5rem;
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      margin-bottom: 0;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .chart-container:hover {
+      box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .chart-container.full-width {
+      grid-column: 1 / -1;
+    }
+    
+    h2 { 
+      font-size: 1.5rem; 
+      color: var(--primary-dark); 
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .kpi-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .kpi-card {
+      background: var(--white);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .kpi-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+    }
+    
+    .kpi-card .kpi-title {
+      font-size: 0.9rem;
+      color: var(--gray);
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+    
+    .kpi-card .kpi-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 0.5rem;
+    }
+    
+    .kpi-card .kpi-change {
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    
+    .kpi-card .kpi-change.positive {
+      color: var(--secondary);
+    }
+    
+    .kpi-card .kpi-change.negative {
+      color: var(--danger);
+    }
+    
+    .kpi-card .kpi-icon {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      font-size: 2rem;
+      opacity: 0.1;
+      color: var(--primary);
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 0.75rem;
+      text-align: left;
+    }
+    
+    th { 
+      background-color: var(--light); 
+      color: var(--primary-dark); 
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 0.5px;
+    }
+    
+    tr:nth-child(even) {
+      background-color: #f9fafb;
+    }
+    
+    tr:hover {
+      background-color: var(--light);
+    }
+    
+    .notification {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      padding: 1rem 1.5rem;
+      background: var(--white);
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transform: translateX(120%);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+      max-width: 350px;
+    }
+    
+    .notification.show {
+      transform: translateX(0);
+    }
+    
+    .notification-icon {
+      font-size: 1.5rem;
+    }
+    
+    .notification.success .notification-icon {
+      color: var(--secondary);
+    }
+    
+    .notification.warning .notification-icon {
+      color: var(--warning);
+    }
+    
+    .notification.danger .notification-icon {
+      color: var(--danger);
+    }
+    
+    .notification-content {
+      flex: 1;
+    }
+    
+    .notification-title {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    
+    .notification-message {
+      font-size: 0.9rem;
+      color: var(--gray);
+    }
+    
+    .close-notification {
+      background: none;
+      border: none;
+      color: var(--gray);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 0.25rem;
+    }
+    
+    .tooltip {
+      position: absolute;
+      padding: 0.75rem 1rem;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      border-radius: 6px;
+      pointer-events: none;
+      font-size: 0.9rem;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    
+    .tooltip:after {
+      content: "";
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 5px 5px 0;
+      border-style: solid;
+      border-color: rgba(0, 0, 0, 0.8) transparent transparent;
+    }
+    
+    @keyframes fadeIn {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0);
+  }
+}
+
+    
+    @media (max-width: 768px) {
+      .page {
+        grid-template-columns: 1fr;
+      }
+      
+      .dashboard-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .filters {
+        flex-direction: column;
+      }
+      
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 3H21V21H3V3ZM5 5V19H19V5H5ZM11 11H17V13H11V11Z" fill="currentColor"/>
+        </svg>
+        Superstore Advanced Dashboard
+      </h1>
+      <p class="header-subtitle">Interactive data visualization for Superstore sales and profit analysis</p>
+    </header>
+    
+    <div class="dashboard-controls">
+      <div class="filters">
+        <div class="filter-group">
+          <label for="time-period">Time Period</label>
+          <select id="time-period">
+            <option value="all">All Time</option>
+            <option value="year">This Year</option>
+            <option value="quarter">This Quarter</option>
+            <option value="month">This Month</option>
+            <option value="custom">Custom Range</option>
+          </select>
+        </div>
+        
+        <div class="filter-group date-range" id="custom-range" style="display: none;">
+          <label for="start-date">Date Range</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="date" id="start-date" style="flex: 1;">
+            <span style="display: flex; align-items: center;">to</span>
+            <input type="date" id="end-date" style="flex: 1;">
+          </div>
+        </div>
+        
+        <div class="filter-group">
+          <label for="region-filter">Region</label>
+          <select id="region-filter">
+            <option value="all">All Regions</option>
+            <option value="Central">Central</option>
+            <option value="East">East</option>
+            <option value="South">South</option>
+            <option value="West">West</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label for="category-filter">Category</label>
+          <select id="category-filter">
+            <option value="all">All Categories</option>
+            <option value="Furniture">Furniture</option>
+            <option value="Office Supplies">Office Supplies</option>
+            <option value="Technology">Technology</option>
+          </select>
+        </div>
+      </div>
+      
+      <button id="apply-filters" style="align-self: flex-end;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 18H14V16H10V18ZM3 6V8H21V6H3ZM6 13H18V11H6V13Z" fill="currentColor"/>
+        </svg>
+        Apply Filters
+      </button>
+    </div>
+    
+    <div class="kpi-container">
+      <div class="kpi-card">
+        <div class="kpi-title">Total Sales</div>
+        <div class="kpi-value" id="total-sales">$2,423,265</div>
+        <div class="kpi-change positive" id="sales-change">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4L20 12H14V20H10V12H4L12 4Z" fill="currentColor"/>
+          </svg>
+          <span>5% vs previous period</span>
+        </div>
+        <div class="kpi-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM11 7H13V13H11V7ZM11 15H13V17H11V15Z" fill="currentColor"/>
+          </svg>
+        </div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-title">Total Profit</div>
+        <div class="kpi-value" id="total-profit">$290,000</div>
+        <div class="kpi-change negative" id="profit-change">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 20L4 12H10V4H14V12H20L12 20Z" fill="currentColor"/>
+          </svg>
+          <span>12.47% vs previous period</span>
+        </div>
+        <div class="kpi-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+          </svg>
+        </div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-title">Profit Margin</div>
+        <div class="kpi-value" id="profit-margin">12.5%</div>
+        <div class="kpi-change positive" id="margin-change">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4L20 12H14V20H10V12H4L12 4Z" fill="currentColor"/>
+          </svg>
+          <span>1.5% vs previous period</span>
+        </div>
+        <div class="kpi-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+          </svg>
+        </div>
+      </div>
+      
+      <div class="kpi-card">
+        <div class="kpi-title">Avg. Order Value</div>
+        <div class="kpi-value" id="avg-order">$1325.8</div>
+        <div class="kpi-change positive" id="order-change">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 4L20 12H14V20H10V12H4L12 4Z" fill="currentColor"/>
+          </svg>
+          <span>5% vs previous period</span>
+        </div>
+        <div class="kpi-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+    
+    <nav>
+      <button onclick="showPage('sales')" class="active">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z" fill="currentColor"/>
+        </svg>
+        Sales Overview
+      </button>
+      <button onclick="showPage('profits')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+        </svg>
+        Profit Analysis
+      </button>
+      <button onclick="showPage('regions')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+        </svg>
+        Regional Data
+      </button>
+      <button onclick="showPage('customers')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+        </svg>
+        Customer Insights
+      </button>
+    </nav>
+
+    <section id="sales" class="page active">
+<div class="chart-container" id="pie-sales">
+  <h2>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M11 2v20c-5.1-0.5-9-4.8-9-10s3.9-9.5 9-10zm2 0v9.99h9c-0.47-5.25-4.22-9.26-9-9.99zm0 12v8c2.86-0.5 5.41-2.23 7.13-4.71 1.4-2.02 2.03-4.51 1.87-6.94 0-0.15 0-0.3-0.01-0.45H13z" fill="currentColor"/>
+    </svg>
+    Sales by Category  </h2>
+  <div id="category-piechart"></div>
+</div>
+
+<script src="d3.min.js"></script>
+<script>
+d3.csv("Sample - Superstore.csv").then(function(data) {
+  const salesByCategory = d3.rollup(
+    data,
+    v => d3.sum(v, d => +d.Sales), 
+    d => d.Category
+  );
+  
+  const pieData = Array.from(salesByCategory, ([category, sales]) => ({
+    category,
+    sales
+  }));
+  
+  const width = 800;
+  const height = 500;
+  const margin = 40;
+  
+  const radius = Math.min(width, height) / 2 - margin;
+  
+  // Create SVG
+  const svg = d3.select("#category-piechart")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .append("g")
+    .attr("transform", `translate(${width / 2}, ${height / 2})`);
+  
+  // Set color scale
+  const color = d3.scaleOrdinal()
+    .domain(pieData.map(d => d.category))
+    .range(d3.schemeCategory10);
+  
+  // Create pie chart layout
+  const pie = d3.pie()
+    .value(d => d.sales)
+    .sort(null); // Don't sort, maintain original order
+  
+  // Generate arc data
+  const arcData = pie(pieData);
+  
+  // Create arc generator
+  const arc = d3.arc()
+    .innerRadius(0) // For pie chart (no hole in the middle)
+    .outerRadius(radius);
+  
+  // Create outer arc for labels
+  const outerArc = d3.arc()
+    .innerRadius(radius * 1.1)
+    .outerRadius(radius * 1.1);
+  
+  // Add tooltip
+  const tooltip = d3.select("#category-piechart")
+    .append("div")
+    .attr("class", "tooltip")
+    .style("position", "absolute")
+    .style("visibility", "hidden")
+    .style("background-color", "white")
+    .style("border", "solid 1px #ddd")
+    .style("border-radius", "5px")
+    .style("padding", "10px");
+  
+  // Add the arcs (slices)
+  svg.selectAll("allSlices")
+    .data(arcData)
+    .enter()
+    .append("path")
+    .attr("d", arc)
+    .attr("fill", d => color(d.data.category))
+    .attr("stroke", "white")
+    .style("stroke-width", "2px")
+    .style("opacity", 0.7)
+    .on("mouseover", function(event, d) {
+      d3.select(this).style("opacity", 1);
+      tooltip
+        .style("visibility", "visible")
+        .html(`<strong>${d.data.category}</strong><br>$${d3.format(",.2f")(d.data.sales)}<br>${d3.format(".1%")(d.data.sales / d3.sum(pieData, d => d.sales))}`)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 15) + "px");
+    })
+    .on("mouseout", function() {
+      d3.select(this).style("opacity", 0.7);
+      tooltip.style("visibility", "hidden");
+    });
+
+  // Add labels
+  svg.selectAll('allLabels')
+    .data(arcData)
+    .enter()
+    .append('text')
+    .text(d => d.data.category)
+    .attr('transform', function(d) {
+      const pos = outerArc.centroid(d);
+      const midAngle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+      pos[0] = radius * 0.95 * (midAngle < Math.PI ? 1 : -1);
+      return `translate(${pos})`;
+    })
+    .style('text-anchor', function(d) {
+      const midAngle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+      return (midAngle < Math.PI ? 'start' : 'end');
+    })
+    .style('font-size', '12px');
+
+  // Add lines connecting slices to labels
+  svg.selectAll('allPolylines')
+    .data(arcData)
+    .enter()
+    .append('polyline')
+    .attr('points', function(d) {
+      const pos = outerArc.centroid(d);
+      const midAngle = d.startAngle + (d.endAngle - d.startAngle) / 2;
+      pos[0] = radius * 0.9 * (midAngle < Math.PI ? 1 : -1);
+      return [arc.centroid(d), outerArc.centroid(d), pos];
+    })
+    .style('fill', 'none')
+    .style('stroke', '#ccc')
+    .style('stroke-width', '1px');
+
+    
+  // Add legend
+  const legend = svg.selectAll(".legend")
+    .data(pieData)
+    .enter()
+    .append("g")
+    .attr("class", "legend")
+    .attr("transform", (d, i) => `translate(${width/2 - 150}, ${i * 20 - height/2 + 50})`);
+    
+  legend.append("rect")
+    .attr("width", 15)
+    .attr("height", 15)
+    .attr("fill", d => color(d.category));
+    
+  legend.append("text")
+    .attr("x", 20)
+    .attr("y", 12.5)
+    .text(d => `${d.category}: $${d3.format(",.0f")(d.sales)}`)
+    .style("font-size", "12px");
+});
+</script>
+<div class="chart-container" id="donut-category">
+  <h2>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+    </svg>
+    Sales Distribution
+  </h2>
+  <div id="sales-line-chart"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+// Load the CSV data
+d3.csv("Sample - Superstore.csv").then(function(data) {
+  // Convert date strings to Date objects and sales to numbers
+  data.forEach(d => {
+    d.OrderDate = new Date(d["Order Date"]);
+    d.Sales = +d.Sales;
+  });
+
+  // Group data by month and sum sales
+  const salesByMonth = d3.rollup(
+    data,
+    v => d3.sum(v, d => d.Sales),
+    d => d3.timeMonth(d.OrderDate)
+  );
+
+  // Convert Map to array and sort by date
+  const lineData = Array.from(salesByMonth, ([date, sales]) => ({
+    date,
+    sales
+  })).sort((a, b) => a.date - b.date);
+
+  // Set dimensions and margins - updated for container size 800x500
+  const margin = {top: 50, right: 90, bottom: 70, left: 90};
+  const width = 800 - margin.left - margin.right;
+  const height = 500 - margin.top - margin.bottom;
+
+  // Create SVG with updated dimensions
+  const svg = d3.select("#sales-line-chart")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  // Add X axis
+  const x = d3.scaleTime()
+    .domain(d3.extent(lineData, d => d.date))
+    .range([0, width]);
+  
+  svg.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x).ticks(d3.timeMonth.every(2)).tickFormat(d3.timeFormat("%b %Y")))
+    .selectAll("text")
+    .style("text-anchor", "end")
+    .attr("dx", "-.8em")
+    .attr("dy", ".15em")
+    .attr("transform", "rotate(-45)");
+
+  // Add X axis label
+  svg.append("text")
+    .attr("text-anchor", "middle")
+    .attr("x", width / 2)
+    .attr("y", height + margin.bottom - 15)
+    .text("Order Date")
+    .style("font-size", "14px");
+
+  // Add Y axis with formatting
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(lineData, d => d.sales) * 1.1])
+    .range([height, 0]);
+
+  svg.append("g")
+    .call(d3.axisLeft(y).tickFormat(d => "$" + d3.format(",.0f")(d)));
+
+  // Add Y axis label
+  svg.append("text")
+    .attr("text-anchor", "middle")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -margin.left + 20)
+    .attr("x", -height / 2)
+    .text("Sales")
+    .style("font-size", "14px");
+
+  // Create a tooltip div
+  const tooltip = d3.select("#sales-line-chart")
+    .append("div")
+    .style("position", "absolute")
+    .style("visibility", "hidden")
+    .style("background-color", "white")
+    .style("border", "solid 1px #ddd")
+    .style("border-radius", "5px")
+    .style("padding", "10px")
+    .style("box-shadow", "0px 0px 6px rgba(0, 0, 0, 0.3)")
+    .style("pointer-events", "none")
+    .style("font-size", "14px")
+    .style("z-index", "100");
+
+  // Add the line
+  svg.append("path")
+    .datum(lineData)
+    .attr("fill", "none")
+    .attr("stroke", "#2c7bb6")
+    .attr("stroke-width", 3)
+    .attr("d", d3.line()
+      .x(d => x(d.date))
+      .y(d => y(d.sales))
+      .curve(d3.curveMonotoneX) // Smoother curve
+    );
+
+  // Add data points group for better organization
+  const points = svg.append("g")
+    .attr("class", "data-points");
+
+  // Add data points with interactive tooltips
+  points.selectAll("circle")
+    .data(lineData)
+    .enter()
+    .append("circle")
+    .attr("cx", d => x(d.date))
+    .attr("cy", d => y(d.sales))
+    .attr("r", 5)
+    .attr("fill", "#2c7bb6")
+    .on("mouseover", function(event, d) {
+      // Highlight the point
+      d3.select(this)
+        .attr("r", 8)
+        .attr("fill", "#ff7f0e");
+      
+      // Show tooltip
+      tooltip
+        .style("visibility", "visible")
+        .html(`<strong>${d3.timeFormat("%B %Y")(d.date)}</strong><br>Sales: $${d3.format(",.2f")(d.sales)}`)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 15) + "px");
+      
+      // Add sales value text above the point
+      points.append("text")
+        .attr("class", "value-label")
+        .attr("x", x(d.date))
+        .attr("y", y(d.sales) - 15)
+        .attr("text-anchor", "middle")
+        .attr("font-size", "12px")
+        .attr("font-weight", "bold")
+        .text("$" + d3.format(",.0f")(d.sales));
+    })
+    .on("mouseout", function() {
+      // Restore point style
+      d3.select(this)
+        .attr("r", 5)
+        .attr("fill", "#2c7bb6");
+      
+      // Hide tooltip
+      tooltip.style("visibility", "hidden");
+      
+      // Remove sales value text
+      points.selectAll(".value-label").remove();
+    });
+
+  // Add grid lines
+  svg.append("g")
+    .attr("class", "grid")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x)
+      .ticks(10)
+      .tickSize(-height)
+      .tickFormat("")
+    )
+    .style("stroke-dasharray", "3,3")
+    .style("opacity", 0.2);
+
+  svg.append("g")
+    .attr("class", "grid")
+    .call(d3.axisLeft(y)
+      .ticks(10)
+      .tickSize(-width)
+      .tickFormat("")
+    )
+    .style("stroke-dasharray", "3,3")
+    .style("opacity", 0.2);
+
+ 
+
+  // Add a legend
+  svg.append("circle")
+    .attr("cx", width - 100)
+    .attr("cy", 10)
+    .attr("r", 6)
+    .style("fill", "#2c7bb6");
+  
+  svg.append("text")
+    .attr("x", width - 80)
+    .attr("y", 10)
+    .text("Sales")
+    .style("font-size", "12px")
+    .attr("alignment-baseline", "middle");
+    
+  // Add a hover instruction
+  svg.append("text")
+    .attr("x", width - 200)
+    .attr("y", 30)
+    .style("font-size", "12px")
+    .style("font-style", "italic")
+    .style("opacity", 0.7);
+});
+</script>
+      
+<div class="chart-container" id="stacked-sales">
+  <h2>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z" fill="currentColor"/>
+    </svg>
+    Sales by Sub-Category
+  </h2>
+  <div id="subcategory-sales-chart"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+// Load the CSV data
+d3.csv("Sample - Superstore.csv").then(function(data) {
+  // Convert sales to numbers
+  data.forEach(d => {
+    d.Sales = +d.Sales;
+  });
+
+  // Get unique categories and sub-categories
+  const categories = Array.from(new Set(data.map(d => d.Category)));
+  
+  // Rollup data to get sales by sub-category
+  const salesBySubCategory = d3.rollup(
+    data,
+    v => d3.sum(v, d => d.Sales),
+    d => d.Category,
+    d => d["Sub-Category"]
+  );
+  
+  // Prepare data for stacked bars
+  const stackData = [];
+  
+  // For each category and its sub-categories
+  salesBySubCategory.forEach((subCatMap, category) => {
+    subCatMap.forEach((sales, subCategory) => {
+      stackData.push({
+        category,
+        subCategory,
+        sales
+      });
+    });
+  });
+  
+  // Sort by sales value (descending)
+  stackData.sort((a, b) => b.sales - a.sales);
+  
+  // Get unique sub-categories
+  const subCategories = Array.from(new Set(stackData.map(d => d.subCategory)));
+  
+  // Prepare data for grouped bar chart
+  const groupedData = d3.group(stackData, d => d.subCategory);
+  
+  // Set dimensions and margins
+  const margin = {top: 50, right: 180, bottom: 100, left: 90};
+  const width = 800 - margin.left - margin.right;
+  const height = 600 - margin.top - margin.bottom;
+  
+  // Create SVG
+  const svg = d3.select("#subcategory-sales-chart")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+  
+  // Set X scale
+  const x = d3.scaleBand()
+    .domain(subCategories)
+    .range([0, width])
+    .padding(0.3);
+  
+  // Set Y scale
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(stackData, d => d.sales) * 1.1])
+    .range([height, 0]);
+  
+  // Set color scale (using different colors for each category)
+  const colorScale = d3.scaleOrdinal()
+    .domain(categories)
+    .range(["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]);
+  
+  // Add X axis
+  svg.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x))
+    .selectAll("text")
+    .attr("transform", "translate(-10,0)rotate(-45)")
+    .style("text-anchor", "end")
+    .style("font-size", "12px");
+  
+  // Add Y axis with dollar formatting
+  svg.append("g")
+    .call(d3.axisLeft(y).tickFormat(d => "$" + d3.format(",.0f")(d)));
+  
+  // Add Y axis label
+  svg.append("text")
+    .attr("text-anchor", "middle")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -margin.left + 25)
+    .attr("x", -height / 2)
+    .style("font-size", "14px")
+    .text("Sales");
+  
+  // Create tooltip
+  const tooltip = d3.select("#subcategory-sales-chart")
+    .append("div")
+    .style("position", "absolute")
+    .style("visibility", "hidden")
+    .style("background-color", "white")
+    .style("border", "solid 1px #ddd")
+    .style("border-radius", "5px")
+    .style("padding", "10px")
+    .style("box-shadow", "0px 0px 6px rgba(0, 0, 0, 0.3)")
+    .style("z-index", "100");
+  
+  // Create the bars
+  svg.selectAll(".bar")
+    .data(stackData)
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x", d => x(d.subCategory))
+    .attr("y", d => y(d.sales))
+    .attr("width", x.bandwidth())
+    .attr("height", d => height - y(d.sales))
+    .attr("fill", d => colorScale(d.category))
+    .on("mouseover", function(event, d) {
+      // Highlight the bar
+      d3.select(this)
+        .attr("stroke", "#000")
+        .attr("stroke-width", 2)
+        .style("opacity", 1);
+      
+      // Show tooltip
+      tooltip
+        .style("visibility", "visible")
+        .html(`<strong>${d.subCategory}</strong> (${d.category})<br>Sales: $${d3.format(",.2f")(d.sales)}`)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 15) + "px");
+      
+      // Add sales value on top of bar
+      svg.append("text")
+        .attr("class", "value-label")
+        .attr("x", x(d.subCategory) + x.bandwidth() / 2)
+        .attr("y", y(d.sales) - 5)
+        .attr("text-anchor", "middle")
+        .style("font-size", "11px")
+        .style("font-weight", "bold")
+        .text("$" + d3.format(",.0f")(d.sales));
+    })
+    .on("mouseout", function() {
+      // Restore bar style
+      d3.select(this)
+        .attr("stroke", "none")
+        .style("opacity", 0.9);
+      
+      // Hide tooltip
+      tooltip.style("visibility", "hidden");
+      
+      // Remove sales value
+      svg.selectAll(".value-label").remove();
+    });
+  
+  // Add grid lines
+  svg.append("g")
+    .attr("class", "grid")
+    .call(d3.axisLeft(y)
+      .tickSize(-width)
+      .tickFormat("")
+    )
+    .style("stroke-dasharray", "3,3")
+    .style("opacity", 0.2);
+  
+
+  
+  // Create legend
+  const legend = svg.append("g")
+    .attr("class", "legend")
+    .attr("transform", `translate(${width + 20}, 0)`);
+  
+  categories.forEach((category, i) => {
+    const legendRow = legend.append("g")
+      .attr("transform", `translate(0, ${i * 20})`);
+    
+    legendRow.append("rect")
+      .attr("width", 15)
+      .attr("height", 15)
+      .attr("fill", colorScale(category));
+    
+    legendRow.append("text")
+      .attr("x", 25)
+      .attr("y", 12.5)
+      .style("font-size", "12px")
+      .text(category);
+  });
+  
+  // Add hover instruction
+  svg.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + 70)
+    .attr("text-anchor", "middle")
+    .style("font-size", "12px")
+    .style("font-style", "italic")
+    .style("opacity", 0.7);
+  
+  // Add slight opacity to all bars for better aesthetics
+  svg.selectAll(".bar").style("opacity", 0.9);
+});
+</script>
+      
+      <!-- Add this to your HTML file -->
+<div class="chart-container" id="heatmap-sales">
+  <h2>
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+    </svg>
+    Sales by Day of Week
+  </h2>
+  <div id="day-of-week-heatmap"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+// Load the CSV data
+d3.csv("Sample - Superstore.csv").then(function(data) {
+  // Convert date strings to Date objects and sales to numbers
+  data.forEach(d => {
+    d.OrderDate = new Date(d["Order Date"]);
+    d.Sales = +d.Sales;
+    
+    // Add day of week (0 = Sunday, 6 = Saturday)
+    d.DayOfWeek = d.OrderDate.getDay();
+    
+    // Add month for the heatmap
+    d.Month = d.OrderDate.getMonth();
+    d.Year = d.OrderDate.getFullYear();
+  });
+
+  // Define day names for display
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  
+  // Define month names for display
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  // Group data by day of week and month, summing sales
+  const aggregatedData = [];
+  
+  // Create a rollup to get sales by day of week and month
+  const salesByDayAndMonth = d3.rollup(
+    data,
+    v => d3.sum(v, d => d.Sales),
+    d => d.Year,
+    d => d.Month,
+    d => d.DayOfWeek
+  );
+  
+  // Convert nested maps to flat array for heatmap
+  salesByDayAndMonth.forEach((yearMap, year) => {
+    yearMap.forEach((monthMap, month) => {
+      monthMap.forEach((sales, day) => {
+        aggregatedData.push({
+          year: year,
+          month: month,
+          day: day,
+          monthName: monthNames[month],
+          dayName: dayNames[day],
+          yearMonth: `${year}-${month+1}`,
+          sales: sales
+        });
+      });
+    });
+  });
+
+  // Set dimensions and margins
+  const margin = {top: 50, right: 80, bottom: 60, left: 120};
+  const width = 800 - margin.left - margin.right;
+  const height = 500 - margin.top - margin.bottom;
+  
+  // Create SVG
+  const svg = d3.select("#day-of-week-heatmap")
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+  
+  // Get unique year-month combinations for the x-axis
+  const yearMonths = Array.from(new Set(aggregatedData.map(d => d.yearMonth))).sort();
+  
+  // Set scales
+  const x = d3.scaleBand()
+    .domain(yearMonths)
+    .range([0, width])
+    .padding(0.05);
+  
+  const y = d3.scaleBand()
+    .domain(dayNames)
+    .range([0, height])
+    .padding(0.05);
+  
+  // Color scale
+  const maxSales = d3.max(aggregatedData, d => d.sales);
+  const colorScale = d3.scaleSequential()
+    .interpolator(d3.interpolateBlues)
+    .domain([0, maxSales]);
+  
+  // Add X axis
+  svg.append("g")
+    .attr("transform", `translate(0,${height})`)
+    .call(d3.axisBottom(x)
+      .tickFormat((d, i) => {
+        // Show abbreviated month names every 3 months
+        if (i % 3 === 0) {
+          const [year, month] = d.split('-');
+          return `${monthNames[month-1]} ${year}`;
+        }
+        return '';
+      }))
+    .selectAll("text")
+    .attr("transform", "translate(-10,0)rotate(-45)")
+    .style("text-anchor", "end")
+    .style("font-size", "10px");
+  
+  // Add Y axis
+  svg.append("g")
+    .call(d3.axisLeft(y))
+    .style("font-size", "12px");
+  
+  // Create tooltip
+  const tooltip = d3.select("#day-of-week-heatmap")
+    .append("div")
+    .style("position", "absolute")
+    .style("visibility", "hidden")
+    .style("background-color", "white")
+    .style("border", "solid 1px #ddd")
+    .style("border-radius", "5px")
+    .style("padding", "10px")
+    .style("box-shadow", "0px 0px 6px rgba(0, 0, 0, 0.3)")
+    .style("font-size", "12px")
+    .style("z-index", "100");
+  
+  // Add heatmap cells
+  svg.selectAll("rect")
+    .data(aggregatedData)
+    .enter()
+    .append("rect")
+    .attr("x", d => x(d.yearMonth))
+    .attr("y", d => y(d.dayName))
+    .attr("width", x.bandwidth())
+    .attr("height", y.bandwidth())
+    .style("fill", d => colorScale(d.sales))
+    .style("stroke", "white")
+    .style("stroke-width", 0.5)
+    .on("mouseover", function(event, d) {
+      // Highlight cell
+      d3.select(this)
+        .style("stroke", "black")
+        .style("stroke-width", 2);
+      
+      // Show tooltip
+      tooltip
+        .style("visibility", "visible")
+        .html(`<strong>${d.dayName}, ${d.monthName} ${d.year}</strong><br>Sales: $${d3.format(",.2f")(d.sales)}`)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 15) + "px");
+    })
+    .on("mouseout", function() {
+      // Restore cell style
+      d3.select(this)
+        .style("stroke", "white")
+        .style("stroke-width", 0.5);
+      
+      // Hide tooltip
+      tooltip.style("visibility", "hidden");
+    });
+ 
+  
+  // Add X axis label
+  svg.append("text")
+    .attr("x", width / 2)
+    .attr("y", height + margin.bottom - 5)
+    .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .text("Month-Year");
+  
+  // Add Y axis label
+  svg.append("text")
+    .attr("text-anchor", "middle")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -margin.left + 30)
+    .attr("x", -height / 2)
+    .style("font-size", "14px")
+    .text("Day of Week");
+  
+  // Add color legend
+  const legendWidth = 240;
+  const legendHeight = 15;
+  
+  // Create gradient for the legend
+  const defs = svg.append("defs");
+  const linearGradient = defs.append("linearGradient")
+    .attr("id", "sales-gradient")
+    .attr("x1", "0%")
+    .attr("y1", "0%")
+    .attr("x2", "100%")
+    .attr("y2", "0%");
+  
+  // Add gradient stops
+  linearGradient.append("stop")
+    .attr("offset", "0%")
+    .attr("stop-color", colorScale(0));
+  
+  linearGradient.append("stop")
+    .attr("offset", "100%")
+    .attr("stop-color", colorScale(maxSales));
+  
+  // Create the rectangle with gradient fill
+  const legend = svg.append("g")
+    .attr("transform", `translate(${width - legendWidth}, -30)`);
+  
+  legend.append("rect")
+    .attr("width", legendWidth)
+    .attr("height", legendHeight)
+    .style("fill", "url(#sales-gradient)");
+  
+  // Add legend axis
+  const legendScale = d3.scaleLinear()
+    .domain([0, maxSales])
+    .range([0, legendWidth]);
+  
+  legend.append("g")
+    .attr("transform", `translate(0, ${legendHeight})`)
+    .call(d3.axisBottom(legendScale)
+      .ticks(5)
+      .tickFormat(d => "$" + d3.format(",.0f")(d)));
+
+});
+</script>
+    </section>
+    <section id="profits" class="page">
+      <!-- Add this to your HTML file -->
+      <div class="chart-container" id="line-profits"> 
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z" fill="currentColor"/>
+          </svg>
+          Profit Over Time
+        </h2>
+        <div id="profit-time-chart" style="position: relative;"></div>
+      </div>
+      
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+      <script>
+      d3.csv("Sample - Superstore.csv").then(function(data) {
+        data.forEach(d => {
+          d.OrderDate = new Date(d["Order Date"]);
+          d.Profit = +d.Profit;
+        });
+      
+        const profitByMonth = d3.rollup(
+          data,
+          v => d3.sum(v, d => d.Profit),
+          d => d3.timeMonth(d.OrderDate)
+        );
+      
+        const lineData = Array.from(profitByMonth, ([date, profit]) => ({ date, profit }))
+          .sort((a, b) => a.date - b.date);
+      
+        let cumulativeProfit = 0;
+        lineData.forEach(d => {
+          cumulativeProfit += d.profit;
+          d.cumulativeProfit = cumulativeProfit;
+        });
+      
+        const margin = { top: 50, right: 100, bottom: 80, left: 80 };
+        const width = 800 - margin.left - margin.right;
+        const height = 500 - margin.top - margin.bottom;
+      
+        const svg = d3.select("#profit-time-chart")
+          .append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", `translate(${margin.left},${margin.top})`);
+      
+        const x = d3.scaleTime()
+          .domain(d3.extent(lineData, d => d.date))
+          .range([0, width]);
+      
+        svg.append("g")
+          .attr("transform", `translate(0,${height})`)
+          .call(d3.axisBottom(x).ticks(d3.timeMonth.every(3)).tickFormat(d3.timeFormat("%b %Y")))
+          .selectAll("text")
+          .style("text-anchor", "end")
+          .attr("dx", "-.8em")
+          .attr("dy", ".15em")
+          .attr("transform", "rotate(-45)");
+      
+        svg.append("text")
+          .attr("text-anchor", "middle")
+          .attr("x", width / 2)
+          .attr("y", height + margin.bottom - 10)
+          .text("Date")
+          .style("font-size", "14px");
+      
+        const minProfit = d3.min(lineData, d => d.profit);
+        const maxProfit = d3.max(lineData, d => d.profit);
+        const profitMargin = Math.max(Math.abs(minProfit), Math.abs(maxProfit)) * 0.1;
+      
+        const y1 = d3.scaleLinear()
+          .domain([Math.min(0, minProfit - profitMargin), Math.max(0, maxProfit + profitMargin)])
+          .range([height, 0]);
+      
+        svg.append("g")
+          .call(d3.axisLeft(y1).tickFormat(d => "$" + d3.format(",.0f")(d)));
+      
+        svg.append("text")
+          .attr("text-anchor", "middle")
+          .attr("transform", "rotate(-90)")
+          .attr("y", -margin.left + 20)
+          .attr("x", -height / 2)
+          .text("Monthly Profit")
+          .style("font-size", "14px")
+          .attr("fill", "#2c7bb6");
+      
+        const y2 = d3.scaleLinear()
+          .domain([0, d3.max(lineData, d => d.cumulativeProfit) * 1.1])
+          .range([height, 0]);
+      
+        svg.append("g")
+          .attr("transform", `translate(${width}, 0)`)
+          .call(d3.axisRight(y2).tickFormat(d => "$" + d3.format(",.0f")(d)));
+      
+        svg.append("text")
+          .attr("text-anchor", "middle")
+          .attr("transform", "rotate(-90)")
+          .attr("y", width + margin.right - 20)
+          .attr("x", -height / 2)
+          .text("Cumulative Profit")
+          .style("font-size", "14px")
+          .attr("fill", "#ff7f0e");
+      
+        // Tooltip with transition
+        const tooltip = d3.select("#profit-time-chart")
+          .append("div")
+          .attr("class", "tooltip")
+          .style("position", "absolute")
+          .style("visibility", "hidden")
+          .style("opacity", 0)
+          .style("background-color", "white")
+          .style("border", "1px solid #ccc")
+          .style("border-radius", "5px")
+          .style("padding", "10px")
+          .style("font-size", "12px")
+          .style("pointer-events", "none")
+          .style("box-shadow", "0 0 6px rgba(0,0,0,0.2)");
+      
+        svg.append("line")
+          .attr("x1", 0)
+          .attr("y1", y1(0))
+          .attr("x2", width)
+          .attr("y2", y1(0))
+          .attr("stroke", "#999")
+          .attr("stroke-width", 1)
+          .attr("stroke-dasharray", "4");
+      
+        svg.append("path")
+          .datum(lineData)
+          .attr("fill", "none")
+          .attr("stroke", "#2c7bb6")
+          .attr("stroke-width", 3)
+          .attr("d", d3.line()
+            .x(d => x(d.date))
+            .y(d => y1(d.profit))
+            .curve(d3.curveMonotoneX)
+          );
+      
+        svg.append("path")
+          .datum(lineData)
+          .attr("fill", "none")
+          .attr("stroke", "#ff7f0e")
+          .attr("stroke-width", 3)
+          .attr("d", d3.line()
+            .x(d => x(d.date))
+            .y(d => y2(d.cumulativeProfit))
+            .curve(d3.curveMonotoneX)
+          );
+      
+        function showTooltip(event, d) {
+          tooltip
+            .html(`<strong>${d3.timeFormat("%B %Y")(d.date)}</strong><br>
+                   Monthly Profit: <span style="color:${d.profit >= 0 ? 'green' : 'red'}">$${d3.format(",.2f")(d.profit)}</span><br>
+                   Cumulative Profit: $${d3.format(",.2f")(d.cumulativeProfit)}`)
+            .style("left", (event.offsetX + 15) + "px")
+            .style("top", (event.offsetY - 30) + "px")
+            .style("visibility", "visible")
+            .transition()
+            .duration(200)
+            .style("opacity", 1);
+        }
+      
+        function hideTooltip() {
+          tooltip.transition()
+            .duration(200)
+            .style("opacity", 0)
+            .on("end", () => tooltip.style("visibility", "hidden"));
+        }
+      
+        svg.selectAll(".monthly-point")
+          .data(lineData)
+          .enter()
+          .append("circle")
+          .attr("class", "monthly-point")
+          .attr("cx", d => x(d.date))
+          .attr("cy", d => y1(d.profit))
+          .attr("r", 5)
+          .attr("fill", d => d.profit >= 0 ? "#2c7bb6" : "#d62728")
+          .on("mouseover", function(event, d) {
+            d3.select(this).attr("r", 8);
+            showTooltip(event, d);
+          })
+          .on("mouseout", function() {
+            d3.select(this).attr("r", 5);
+            hideTooltip();
+          });
+      
+        svg.selectAll(".cumulative-point")
+          .data(lineData)
+          .enter()
+          .append("circle")
+          .attr("class", "cumulative-point")
+          .attr("cx", d => x(d.date))
+          .attr("cy", d => y2(d.cumulativeProfit))
+          .attr("r", 3)
+          .attr("fill", "#ff7f0e")
+          .style("opacity", 0.7)
+          .on("mouseover", function(event, d) {
+            d3.select(this).attr("r", 6).style("opacity", 1);
+            showTooltip(event, d);
+          })
+          .on("mouseout", function() {
+            d3.select(this).attr("r", 3).style("opacity", 0.7);
+            hideTooltip();
+          });
+      
+        svg.append("g")
+          .attr("class", "grid")
+          .call(d3.axisLeft(y1).tickSize(-width).tickFormat(""))
+          .style("stroke-dasharray", "3,3")
+          .style("opacity", 0.2);
+      
+        svg.append("text")
+          .attr("x", width / 2)
+          .attr("y", -margin.top / 2)
+          .attr("text-anchor", "middle")
+          .style("font-size", "18px")
+          .style("font-weight", "bold");
+      
+        const legend = svg.append("g")
+          .attr("class", "legend")
+          .attr("transform", `translate(20, 10)`);
+      
+        legend.append("circle")
+          .attr("cx", 0)
+          .attr("cy", 0)
+          .attr("r", 5)
+          .style("fill", "#2c7bb6");
+      
+        legend.append("text")
+          .attr("x", 15)
+          .attr("y", 5)
+          .text("Monthly Profit")
+          .style("font-size", "12px");
+      
+        legend.append("circle")
+          .attr("cx", 130)
+          .attr("cy", 0)
+          .attr("r", 5)
+          .style("fill", "#ff7f0e");
+      
+        legend.append("text")
+          .attr("x", 145)
+          .attr("y", 5)
+          .text("Cumulative Profit")
+          .style("font-size", "12px");
+      
+        legend.append("circle")
+          .attr("cx", 280)
+          .attr("cy", 0)
+          .attr("r", 5)
+          .style("fill", "#d62728");
+      
+        legend.append("text")
+          .attr("x", 295)
+          .attr("y", 5)
+          .text("Loss Month")
+          .style("font-size", "12px");
+      });
+      </script>
+      
+<div class="chart-container" id="gauge-profit">
+  <h2>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+      </svg>
+      Profit Margin Gauge
+  </h2>
+  <svg class="gauge-container"></svg>
+</div>
+
+<script>
+  d3.csv("Sample - Superstore.csv").then(function(data) {
+      // Calculate total sales and total profit
+      let totalSales = 0;
+      let totalProfit = 0;
+
+      data.forEach(d => {
+          totalSales += parseFloat(d.Sales);
+          totalProfit += parseFloat(d.Profit);
+      });
+
+      // Calculate the overall profit margin
+      const profitMargin = totalSales === 0 ? 0 : (totalProfit / totalSales) * 100;
+
+      // Set up the dimensions for the gauge
+      const width = 800;
+      const height = 300;
+      const radius = Math.min(width, height) / 2;
+
+      // Select the SVG container
+      const svg = d3.select(".gauge-container")
+          .attr("width", width)
+          .attr("height", height)
+          .append("g")
+          .attr("transform", `translate(${width / 2}, ${height})`); // Center the gauge at the bottom
+
+      // Define the arc for the gauge
+      const arc = d3.arc()
+          .innerRadius(0)
+          .outerRadius(radius);
+
+      // Define the scale for the profit margin (assuming -100% to +100% for demonstration)
+      const angleScale = d3.scaleLinear()
+          .domain([-100, 100])
+          .range([-Math.PI, Math.PI]); // 180 degrees
+
+      // Create the background arc
+      const backgroundArc = d3.arc()
+          .innerRadius(0)
+          .outerRadius(radius - 20)
+          .startAngle(angleScale(-100))
+          .endAngle(angleScale(100));
+
+      svg.append("path")
+          .attr("d", backgroundArc)
+          .attr("fill", "#eee");
+
+      // Create the foreground arc based on the profit margin
+      const foregroundArc = d3.arc()
+          .innerRadius(0)
+          .outerRadius(radius - 20)
+          .startAngle(angleScale(0)) // Start from 0
+          .endAngle(angleScale(profitMargin));
+
+      svg.append("path")
+          .attr("d", foregroundArc)
+          .attr("fill", "steelblue");
+
+      // Create the needle (a simple triangle)
+      const needleLength = radius - 30;
+      const needleData = [
+          { x: -5, y: 0 },
+          { x: 5, y: 0 },
+          { x: 0, y: -needleLength }
+      ];
+      const lineGenerator = d3.line()
+          .x(d => d.x)
+          .y(d => d.y);
+
+      svg.append("path")
+          .attr("d", lineGenerator(needleData))
+          .attr("fill", "black")
+          .attr("transform", `rotate(${angleScale(profitMargin) * 180 / Math.PI})`);
+
+      // Add text to display the profit margin value
+      svg.append("text")
+          .attr("x", 0)
+          .attr("y", -radius -5)
+          .attr("text-anchor", "middle")
+          .style("font-size", "24px")
+          .text(`${profitMargin.toFixed(2)}%`);
+
+      // Add a label below the gauge
+      svg.append("text")
+          .attr("x", 0)
+          .attr("y", 20)
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px")
+          .text("Overall Profit Margin");
+
+  }).catch(function(error){
+      console.error("Error loading the CSV file:", error);
+  });
+</script>
+      
+<div class="chart-container" id="bubble-profit">
+  <h2>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+      </svg>
+      Profit vs Sales vs Discount
+  </h2>
+</div>
+
+<script>
+  d3.csv("Sample - Superstore.csv").then(function(data) {
+      // Filter out data with null or undefined values for Sales and Profit
+      const validData = data.filter(d => !isNaN(parseFloat(d.Sales)) && !isNaN(parseFloat(d.Profit)) && !isNaN(parseFloat(d.Discount)));
+
+      // Set up the dimensions and margins of the graph
+      const margin = {top: 20, right: 30, bottom: 40, left: 50},
+          width = 600 - margin.left - margin.right,
+          height = 400 - margin.top - margin.bottom;
+
+      // Append the SVG object to the div
+      const svg = d3.select("#bubble-profit")
+          .append("svg")
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+              .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+      // Define scales
+      const x = d3.scaleLinear()
+          .domain([0, d3.max(validData, d => parseFloat(d.Sales)) * 1.1])
+          .range([0, width]);
+      svg.append("g")
+          .attr("transform", `translate(0, ${height})`)
+          .call(d3.axisBottom(x));
+      svg.append("text")
+          .attr("text-anchor", "end")
+          .attr("x", width)
+          .attr("y", height + margin.bottom - 5)
+          .text("Sales");
+
+      const y = d3.scaleLinear()
+          .domain([d3.min(validData, d => parseFloat(d.Profit)) * 1.1, d3.max(validData, d => parseFloat(d.Profit)) * 1.1])
+          .range([height, 0]);
+      svg.append("g")
+          .call(d3.axisLeft(y));
+      svg.append("text")
+          .attr("text-anchor", "end")
+          .attr("y", -margin.top + 15)
+          .attr("x", 0)
+          .text("Profit");
+
+      const z = d3.scaleLinear()
+          .domain([0, d3.max(validData, d => parseFloat(d.Discount))])
+          .range([5, 30]);
+
+      // Create the tooltip div
+      const tooltip = d3.select("body").append("div")
+          .attr("class", "tooltip");
+
+      // Add the bubbles
+      svg.selectAll("circle")
+          .data(validData)
+          .enter().append("circle")
+              .attr("cx", d => x(parseFloat(d.Sales)))
+              .attr("cy", d => y(parseFloat(d.Profit)))
+              .attr("r", d => z(parseFloat(d.Discount)))
+              .style("fill", "steelblue")
+              .style("opacity", 0.7)
+              .on("mouseover", function(event, d) {
+                  d3.select(this)
+                      .style("stroke", "black")
+                      .style("stroke-width", 2);
+                  tooltip.transition()
+                      .duration(200)
+                      .style("opacity", .9);
+                  tooltip.html(`Sales: $${parseFloat(d.Sales).toFixed(2)}<br>Profit: $${parseFloat(d.Profit).toFixed(2)}<br>Discount: ${(parseFloat(d.Discount) * 100).toFixed(2)}%`)
+                      .style("left", (event.pageX + 10) + "px")
+                      .style("top", (event.pageY - 28) + "px");
+              })
+              .on("mouseout", function(event, d) {
+                  d3.select(this)
+                      .style("stroke", "none");
+                  tooltip.transition()
+                      .duration(500)
+                      .style("opacity", 0);
+              });
+
+  }).catch(function(error){
+      console.error("Error loading the CSV file:", error);
+  });
+</script>
+      
+<div class="chart-container" id="profit-category">
+  <h2>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+      </svg>
+      Profit by Category
+  </h2>
+</div>
+
+<script>
+  d3.csv("Sample - Superstore.csv").then(function(data) {
+      // Group data by Category and sum the Profit
+      const profitByCategory = d3.rollup(data, v => d3.sum(v, d => parseFloat(d.Profit) || 0), d => d.Category);
+
+      // Convert the rolled-up data to an array of objects
+      const categoryProfitArray = Array.from(profitByCategory, ([category, totalProfit]) => ({ category, totalProfit }));
+
+      // Sort the data by profit (optional, for better visualization)
+      categoryProfitArray.sort((a, b) => b.totalProfit - a.totalProfit);
+
+      // Set up the dimensions and margins of the chart
+      const margin = {top: 20, right: 30, bottom: 60, left: 100}, // Increased bottom margin
+          width = 600 - margin.left - margin.right,
+          height = 400 - margin.top - margin.bottom;
+
+      // Append the SVG object to the div
+      const svg = d3.select("#profit-category")
+          .append("svg")
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+              .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+      // Define the y-axis scale (for categories)
+      const y = d3.scaleBand()
+          .domain(categoryProfitArray.map(d => d.category))
+          .range([0, height])
+          .padding(0.1);
+      svg.append("g")
+          .call(d3.axisLeft(y));
+
+      // Define the x-axis scale (for profit)
+      const x = d3.scaleLinear()
+          .domain([
+              Math.min(0, d3.min(categoryProfitArray, d => d.totalProfit)), // commence à 0 ou au min si négatif
+              d3.max(categoryProfitArray, d => d.totalProfit) * 1.1
+          ])
+          .range([0, width]);
+
+      svg.append("g")
+          .attr("transform", `translate(0, ${height})`)
+          .call(d3.axisBottom(x)
+              .ticks(Math.ceil((d3.max(categoryProfitArray, d => d.totalProfit) - Math.min(0, d3.min(categoryProfitArray, d => d.totalProfit))) / 20000))
+              .tickFormat(d3.format("$,.0f"))
+              .tickValues(d3.range(
+                  Math.floor(Math.min(0, d3.min(categoryProfitArray, d => d.totalProfit)) / 20000) * 20000,
+                  Math.ceil(d3.max(categoryProfitArray, d => d.totalProfit) * 1.1 / 20000) * 20000,
+                  20000
+              ))
+          );
+
+      // Append the bars
+      svg.selectAll(".bar")
+          .data(categoryProfitArray)
+          .enter().append("rect")
+              .attr("class", "bar")
+              .attr("y", d => y(d.category))
+              .attr("height", y.bandwidth())
+              .attr("x", d => x(Math.min(0, d.totalProfit))) // commence à 0 ou au min si négatif
+              .attr("width", d => Math.abs(x(d.totalProfit) - x(0))) // largeur absolue
+              .style("fill", d => d.totalProfit >= 0 ? "steelblue" : "#ff4444"); // couleur différente pour les valeurs négatives
+
+      // Add labels to the bars (optional)
+      svg.selectAll(".label")
+          .data(categoryProfitArray)
+          .enter().append("text")
+              .attr("class", "label")
+              .attr("y", d => y(d.category) + y.bandwidth() / 2 + 3) // Center vertically
+              .attr("x", d => x(d.totalProfit) + (d.totalProfit >= 0 ? 5 : -5)) // Position based on profit value
+              .attr("text-anchor", d => d.totalProfit >= 0 ? "start" : "end") // Text alignment based on profit value
+              .text(d => d3.format("$.2s")(d.totalProfit));
+
+      // Add x-axis label
+      svg.append("text")
+          .attr("transform", `translate(${width / 2}, ${height + margin.bottom - 5})`)
+          .style("text-anchor", "middle")
+          .text("Total Profit");
+
+  }).catch(function(error){
+      console.error("Error loading the CSV file:", error);
+  });
+</script>
+    </section>
+
+    <section id="regions" class="page">
+      <div class="chart-container" id="map-regions">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+          </svg>
+          Regional Performance Overview
+        </h2>
+        <div id="regional-map"></div>
+      </div>
+
+      <script>
+        d3.csv("Sample - Superstore.csv").then(function(data) {
+          // Optimiser le traitement des données avec des méthodes plus efficaces
+          const regionMetrics = d3.rollup(
+            data,
+            v => ({
+              sales: d3.sum(v, d => +d.Sales),
+              profit: d3.sum(v, d => +d.Profit),
+              orders: v.length,
+              profitMargin: (d3.sum(v, d => +d.Profit) / d3.sum(v, d => +d.Sales)) * 100,
+              avgOrderValue: d3.mean(v, d => +d.Sales)
+            }),
+            d => d.Region
+          );
+
+          const regionData = Array.from(regionMetrics, ([region, metrics]) => ({
+            region,
+            ...metrics
+          }));
+
+          const width = 900;
+          const height = 600;
+          const margin = { top: 40, right: 160, bottom: 60, left: 60 };
+          const innerWidth = width - margin.left - margin.right;
+          const innerHeight = height - margin.top - margin.bottom;
+
+          // Création du SVG avec un viewBox pour la réactivité
+          const svg = d3.select("#regional-map")
+            .append("svg")
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("preserveAspectRatio", "xMidYMid meet")
+            .append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+          // Palettes de couleurs optimisées
+          const colorScale = d3.scaleLinear()
+            .domain([0, d3.max(regionData, d => d.sales)])
+            .range(["#e0f3f8", "#2c7bb6"]);
+
+          // Positions optimisées des régions
+          const regionLayout = {
+            "West": { x: 50, y: 100, width: 200, height: 300 },
+            "Central": { x: 270, y: 100, width: 200, height: 300 },
+            "East": { x: 490, y: 100, width: 200, height: 300 },
+            "South": { x: 270, y: 420, width: 200, height: 120 }
+          };
+
+          // Créer un groupe pour chaque région avec animation
+          const regions = svg.selectAll(".region")
+            .data(regionData)
+            .enter()
+            .append("g")
+            .attr("class", "region")
+            .attr("transform", d => `translate(${regionLayout[d.region].x}, ${regionLayout[d.region].y})`);
+
+          // Ajouter les rectangles des régions avec animation
+          regions.append("rect")
+            .attr("width", d => regionLayout[d.region].width)
+            .attr("height", d => regionLayout[d.region].height)
+            .attr("rx", 10)
+            .attr("ry", 10)
+            .style("fill", d => colorScale(d.sales))
+            .style("stroke", "#fff")
+            .style("stroke-width", 2)
+            .style("opacity", 0)
+            .transition()
+            .duration(800)
+            .style("opacity", 0.8);
+
+          // Ajouter les étiquettes avec animation
+          regions.append("text")
+            .attr("class", "region-label")
+            .attr("x", d => regionLayout[d.region].width / 2)
+            .attr("y", d => regionLayout[d.region].height / 2 - 20)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("font-weight", "bold")
+            .style("fill", "#fff")
+            .style("opacity", 0)
+            .text(d => d.region)
+            .transition()
+            .duration(800)
+            .style("opacity", 1);
+
+          // Ajouter les métriques avec animation
+          regions.append("text")
+            .attr("class", "metrics")
+            .attr("x", d => regionLayout[d.region].width / 2)
+            .attr("y", d => regionLayout[d.region].height / 2 + 10)
+            .attr("text-anchor", "middle")
+            .style("font-size", "14px")
+            .style("fill", "#fff")
+            .style("opacity", 0)
+            .text(d => `$${d3.format(",.0f")(d.sales)}`)
+            .transition()
+            .duration(800)
+            .style("opacity", 1);
+
+          // Créer un tooltip amélioré
+          const tooltip = d3.select("#regional-map")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0)
+            .style("position", "absolute")
+            .style("background", "rgba(255, 255, 255, 0.95)")
+            .style("padding", "12px")
+            .style("border-radius", "6px")
+            .style("box-shadow", "0 3px 14px rgba(0,0,0,0.15)")
+            .style("pointer-events", "none")
+            .style("font-size", "14px");
+
+          // Ajouter des interactions améliorées
+          regions.on("mouseover", function(event, d) {
+            const region = d3.select(this);
+            
+            // Animer le rectangle
+            region.select("rect")
+              .transition()
+              .duration(300)
+              .style("opacity", 1)
+              .style("stroke", "#333")
+              .style("stroke-width", 3);
+
+            // Animer le texte
+            region.selectAll("text")
+              .transition()
+              .duration(300)
+              .style("font-size", function() {
+                return this.classList.contains("region-label") ? "18px" : "16px";
+              });
+
+            // Afficher le tooltip
+            tooltip.transition()
+              .duration(300)
+              .style("opacity", 1);
+
+            tooltip.html(`
+              <div style="margin-bottom: 8px;">
+                <strong style="font-size: 16px;">${d.region}</strong>
+              </div>
+              <div style="display: grid; grid-template-columns: auto auto; gap: 8px;">
+                <span>Sales:</span>
+                <span style="text-align: right;">$${d3.format(",.0f")(d.sales)}</span>
+                <span>Profit:</span>
+                <span style="text-align: right;">$${d3.format(",.0f")(d.profit)}</span>
+                <span>Margin:</span>
+                <span style="text-align: right;">${d3.format(".1f")(d.profitMargin)}%</span>
+                <span>Orders:</span>
+                <span style="text-align: right;">${d3.format(",")(d.orders)}</span>
+                <span>Avg Order:</span>
+                <span style="text-align: right;">$${d3.format(",.0f")(d.avgOrderValue)}</span>
+              </div>
+            `)
+              .style("left", (event.pageX + 15) + "px")
+              .style("top", (event.pageY - 28) + "px");
+          })
+          .on("mouseout", function() {
+            const region = d3.select(this);
+            
+            // Restaurer le rectangle
+            region.select("rect")
+              .transition()
+              .duration(300)
+              .style("opacity", 0.8)
+              .style("stroke", "#fff")
+              .style("stroke-width", 2);
+
+            // Restaurer le texte
+            region.selectAll("text")
+              .transition()
+              .duration(300)
+              .style("font-size", function() {
+                return this.classList.contains("region-label") ? "16px" : "14px";
+              });
+
+            // Masquer le tooltip
+            tooltip.transition()
+              .duration(300)
+              .style("opacity", 0);
+          })
+          .on("click", function(event, d) {
+            // Mettre à jour le filtre de région
+            document.getElementById('region-filter').value = d.region;
+            // Déclencher l'événement change pour mettre à jour les graphiques
+            document.getElementById('region-filter').dispatchEvent(new Event('change'));
+          });
+
+          // Légende
+          const legendGroup = svg.append("g")
+            .attr("transform", `translate(${innerWidth + 20}, 0)`);
+
+          legendGroup.append("text")
+            .attr("x", 0)
+            .attr("y", -10)
+            .style("font-size", "14px")
+            .style("font-weight", "bold")
+            .text("Sales Range");
+
+          const legendScale = d3.scaleLinear()
+            .domain([0, d3.max(regionData, d => d.sales)])
+            .range([0, 120]);
+
+          const legendAxis = d3.axisRight(legendScale)
+            .ticks(5)
+            .tickFormat(d3.format("$,.0f"));
+
+          const gradient = svg.append("defs")
+            .append("linearGradient")
+            .attr("id", "sales-gradient")
+            .attr("x1", "0%")
+            .attr("x2", "0%")
+            .attr("y1", "100%")
+            .attr("y2", "0%");
+
+          gradient.append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", "#e0f3f8");
+
+          gradient.append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", "#2c7bb6");
+
+          legendGroup.append("rect")
+            .attr("width", 20)
+            .attr("height", 120)
+            .style("fill", "url(#sales-gradient)");
+
+          legendGroup.append("g")
+            .attr("transform", "translate(20,0)")
+            .call(legendAxis);
+        });
+      </script>
+
+      <div class="chart-container" id="region-stats">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 13H11V3H3V13ZM3 21H11V15H3V21ZM13 21H21V11H13V21ZM13 3V9H21V3H13Z" fill="currentColor"/>
+          </svg>
+          Top Performing States
+        </h2>
+        <div id="top-states-table"></div>
+      </div>
+
+      <script>
+        d3.csv("Sample - Superstore.csv").then(function(data) {
+          // Optimiser le traitement des données
+          const stateMetrics = d3.rollup(
+            data,
+            v => ({
+              state: v[0].State,
+              region: v[0].Region,
+              sales: d3.sum(v, d => +d.Sales),
+              profit: d3.sum(v, d => +d.Profit),
+              orders: v.length,
+              profitMargin: (d3.sum(v, d => +d.Profit) / d3.sum(v, d => +d.Sales)) * 100,
+              avgOrderValue: d3.mean(v, d => +d.Sales),
+              categories: new Set(v.map(d => d.Category)).size
+            }),
+            d => d.State
+          );
+
+          const stateData = Array.from(stateMetrics, ([state, metrics]) => ({
+            state,
+            ...metrics
+          }))
+          .sort((a, b) => b.sales - a.sales)
+          .slice(0, 10);
+
+          // Créer un conteneur de tableau avec scroll horizontal
+          const container = d3.select("#top-states-table")
+            .append("div")
+            .style("overflow-x", "auto")
+            .style("margin-top", "20px");
+
+          // Créer le tableau avec style amélioré
+          const table = container.append("table")
+            .style("width", "100%")
+            .style("border-collapse", "separate")
+            .style("border-spacing", "0")
+            .style("background", "white")
+            .style("border-radius", "8px")
+            .style("overflow", "hidden");
+
+          // En-tête avec style amélioré
+          const thead = table.append("thead");
+          const headers = ["Rank", "State", "Region", "Sales", "Profit", "Margin", "Orders", "Avg Order"];
+
+          thead.append("tr")
+            .selectAll("th")
+            .data(headers)
+            .enter()
+            .append("th")
+            .style("background", "#f8fafc")
+            .style("padding", "12px 16px")
+            .style("text-align", "left")
+            .style("font-weight", "600")
+            .style("color", "#1f2937")
+            .style("border-bottom", "2px solid #e5e7eb")
+            .style("white-space", "nowrap")
+            .text(d => d);
+
+          // Corps du tableau avec animations
+          const tbody = table.append("tbody");
+          const rows = tbody.selectAll("tr")
+            .data(stateData)
+            .enter()
+            .append("tr")
+            .style("opacity", 0)
+            .style("background", (d, i) => i % 2 === 0 ? "#ffffff" : "#f9fafb")
+            .style("transition", "all 0.3s ease");
+
+          // Animer l'apparition des lignes
+          rows.transition()
+            .duration(500)
+            .delay((d, i) => i * 100)
+            .style("opacity", 1);
+
+          // Ajouter les cellules avec formatage amélioré
+          rows.selectAll("td")
+            .data(d => [
+              d3.format("d")(stateData.indexOf(d) + 1),
+              d.state,
+              d.region,
+              d3.format("$,.0f")(d.sales),
+              d3.format("$,.0f")(d.profit),
+              d3.format(".1f")(d.profitMargin) + "%",
+              d3.format(",")(d.orders),
+              d3.format("$,.0f")(d.avgOrderValue)
+            ])
+            .enter()
+            .append("td")
+            .style("padding", "12px 16px")
+            .style("border-bottom", "1px solid #e5e7eb")
+            .style("font-size", "14px")
+            .html((d, i) => {
+              if (i === 0) {
+                return `<span style="
+                  display: inline-flex;
+                  align-items: center;
+                  justify-content: center;
+                  width: 24px;
+                  height: 24px;
+                  border-radius: 12px;
+                  background: ${d <= 3 ? "#4f46e5" : "#e5e7eb"};
+                  color: ${d <= 3 ? "white" : "#374151"};
+                  font-weight: 600;
+                ">${d}</span>`;
+              }
+              return d;
+            });
+
+          // Ajouter des effets de survol
+          rows.on("mouseover", function() {
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .style("background", "#e5e7eb");
+          })
+          .on("mouseout", function(d, i) {
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .style("background", i % 2 === 0 ? "#ffffff" : "#f9fafb");
+          })
+          .on("click", function(event, d) {
+            // Mettre à jour le filtre de région
+            document.getElementById('region-filter').value = d.region;
+            document.getElementById('region-filter').dispatchEvent(new Event('change'));
+          });
+        });
+      </script>
+
+      <div class="chart-container" id="region-trend">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM7 13H17V11H7V13Z" fill="currentColor"/>
+          </svg>
+          Regional Performance Trends
+        </h2>
+        <div id="region-trend-chart"></div>
+      </div>
+
+      <script>
+        d3.csv("Sample - Superstore.csv").then(function(data) {
+          // Préparer les données
+          data.forEach(d => {
+            d.OrderDate = new Date(d["Order Date"]);
+            d.Sales = +d.Sales;
+            d.Profit = +d.Profit;
+          });
+
+          // Agréger par région et par mois
+          const regionMonthlyData = d3.rollup(
+            data,
+            v => ({
+              sales: d3.sum(v, d => d.Sales),
+              profit: d3.sum(v, d => d.Profit),
+              orders: v.length
+            }),
+            d => d.Region,
+            d => d3.timeMonth(d.OrderDate)
+          );
+
+          // Convertir en format adapté pour le graphique
+          const chartData = [];
+          regionMonthlyData.forEach((monthMap, region) => {
+            monthMap.forEach((values, month) => {
+              chartData.push({
+                region,
+                month,
+                ...values
+              });
+            });
+          });
+
+          // Trier par date
+          chartData.sort((a, b) => a.month - b.month);
+
+          // Dimensions
+          const margin = {top: 40, right: 160, bottom: 60, left: 80};
+          const width = 900 - margin.left - margin.right;
+          const height = 500 - margin.top - margin.bottom;
+
+          // Créer le SVG avec viewBox pour la réactivité
+          const svg = d3.select("#region-trend-chart")
+            .append("svg")
+            .attr("viewBox", `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+            .append("g")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
+
+          // Échelles
+          const x = d3.scaleTime()
+            .domain(d3.extent(chartData, d => d.month))
+            .range([0, width]);
+
+          const y = d3.scaleLinear()
+            .domain([0, d3.max(chartData, d => d.sales)])
+            .range([height, 0]);
+
+          // Palette de couleurs optimisée
+          const colorScale = d3.scaleOrdinal()
+            .domain(Array.from(new Set(chartData.map(d => d.region))))
+            .range(d3.schemeCategory10);
+
+          // Axes avec grille
+          svg.append("g")
+            .attr("class", "grid")
+            .attr("transform", `translate(0,${height})`)
+            .call(d3.axisBottom(x)
+              .ticks(12)
+              .tickSize(-height)
+            )
+            .call(g => g.selectAll(".domain").remove());
+
+          svg.append("g")
+            .attr("class", "grid")
+            .call(d3.axisLeft(y)
+              .tickSize(-width)
+              .tickFormat(d3.format("$,.0f"))
+            )
+            .call(g => g.selectAll(".domain").remove());
+
+          // Générateur de ligne
+          const line = d3.line()
+            .x(d => x(d.month))
+            .y(d => y(d.sales))
+            .curve(d3.curveMonotoneX);
+
+          // Créer un groupe pour chaque région
+          const regions = Array.from(new Set(chartData.map(d => d.region)));
+          
+          regions.forEach(region => {
+            const regionData = chartData.filter(d => d.region === region);
+            
+            const path = svg.append("path")
+              .datum(regionData)
+              .attr("fill", "none")
+              .attr("stroke", colorScale(region))
+              .attr("stroke-width", 3)
+              .attr("d", line)
+              .style("opacity", 0.7);
+
+            // Animation du tracé
+            const pathLength = path.node().getTotalLength();
+            
+            path.attr("stroke-dasharray", pathLength)
+              .attr("stroke-dashoffset", pathLength)
+              .transition()
+              .duration(2000)
+              .attr("stroke-dashoffset", 0);
+
+            // Points de données
+            svg.selectAll(`.point-${region}`)
+              .data(regionData)
+              .enter()
+              .append("circle")
+              .attr("class", `point-${region}`)
+              .attr("cx", d => x(d.month))
+              .attr("cy", d => y(d.sales))
+              .attr("r", 5)
+              .attr("fill", colorScale(region))
+              .style("opacity", 0)
+              .transition()
+              .delay((d, i) => 2000 + i * 50)
+              .duration(300)
+              .style("opacity", 0.7);
+          });
+
+          // Tooltip amélioré
+          const tooltip = d3.select("#region-trend-chart")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0)
+            .style("position", "absolute")
+            .style("background", "rgba(255, 255, 255, 0.95)")
+            .style("padding", "12px")
+            .style("border-radius", "6px")
+            .style("box-shadow", "0 3px 14px rgba(0,0,0,0.15)")
+            .style("pointer-events", "none");
+
+          // Ajouter zone de survol
+          const hoverArea = svg.append("rect")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("fill", "none")
+            .attr("pointer-events", "all");
+
+          // Ligne verticale de référence
+          const verticalLine = svg.append("line")
+            .attr("stroke", "#666")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "5,5")
+            .style("opacity", 0);
+
+          // Gestionnaire de survol
+          hoverArea.on("mousemove", function(event) {
+            const [mx] = d3.pointer(event);
+            const date = x.invert(mx);
+            const monthStart = d3.timeMonth.floor(date);
+            const monthEnd = d3.timeMonth.offset(monthStart, 1);
+
+            // Trouver les données pour ce mois
+            const monthData = chartData.filter(d => {
+              const dMonth = d3.timeMonth(d.month);
+              return dMonth >= monthStart && dMonth < monthEnd;
+            });
+
+            if (monthData.length > 0) {
+              verticalLine
+                .attr("x1", x(monthStart))
+                .attr("x2", x(monthStart))
+                .attr("y1", 0)
+                .attr("y2", height)
+                .style("opacity", 1);
+
+              // Mettre à jour les points
+              regions.forEach(region => {
+                svg.selectAll(`.point-${region}`)
+                  .style("opacity", d => {
+                    const dMonth = d3.timeMonth(d.month);
+                    return dMonth >= monthStart && dMonth < monthEnd ? 1 : 0.3;
+                  })
+                  .attr("r", d => {
+                    const dMonth = d3.timeMonth(d.month);
+                    return dMonth >= monthStart && dMonth < monthEnd ? 8 : 5;
+                  });
+              });
+
+              // Mettre à jour le tooltip
+              tooltip
+                .style("opacity", 1)
+                .style("left", `${event.pageX + 15}px`)
+                .style("top", `${event.pageY - 28}px`)
+                .html(`
+                  <div style="font-weight: bold; margin-bottom: 8px;">
+                    ${d3.timeFormat("%B %Y")(monthStart)}
+                  </div>
+                  <div style="display: grid; grid-template-columns: auto auto; gap: 8px;">
+                    ${monthData.map(d => `
+                      <span style="color: ${colorScale(d.region)}">${d.region}:</span>
+                      <span>$${d3.format(",.0f")(d.sales)}</span>
+                    `).join("")}
+                  </div>
+                `);
+            }
+          })
+          .on("mouseleave", function() {
+            verticalLine.style("opacity", 0);
+            tooltip.style("opacity", 0);
+            
+            regions.forEach(region => {
+              svg.selectAll(`.point-${region}`)
+                .style("opacity", 0.7)
+                .attr("r", 5);
+            });
+          });
+
+          // Légende interactive
+          const legend = svg.append("g")
+            .attr("class", "legend")
+            .attr("transform", `translate(${width + 20}, 0)`);
+
+          regions.forEach((region, i) => {
+            const legendRow = legend.append("g")
+              .attr("transform", `translate(0, ${i * 25})`)
+              .style("cursor", "pointer");
+
+            legendRow.append("rect")
+              .attr("width", 15)
+              .attr("height", 15)
+              .attr("fill", colorScale(region))
+              .style("opacity", 0.7);
+
+            legendRow.append("text")
+              .attr("x", 25)
+              .attr("y", 12)
+              .text(region)
+              .style("font-size", "14px");
+
+            // Interactivité de la légende
+            legendRow.on("mouseover", function() {
+              // Mettre en évidence la ligne correspondante
+              svg.selectAll(`path`)
+                .style("opacity", 0.2);
+              
+              svg.selectAll(`.point-${region}`)
+                .style("opacity", 1)
+                .attr("r", 8);
+
+              svg.select(`path[stroke="${colorScale(region)}"]`)
+                .style("opacity", 1)
+                .attr("stroke-width", 4);
+            })
+            .on("mouseout", function() {
+              svg.selectAll("path")
+                .style("opacity", 0.7)
+                .attr("stroke-width", 3);
+              
+              svg.selectAll("circle")
+                .style("opacity", 0.7)
+                .attr("r", 5);
+            })
+            .on("click", function() {
+              // Mettre à jour le filtre de région
+              document.getElementById('region-filter').value = region;
+              document.getElementById('region-filter').dispatchEvent(new Event('change'));
+            });
+          });
+
+          // Étiquettes des axes
+          svg.append("text")
+            .attr("transform", `translate(${width/2}, ${height + 45})`)
+            .style("text-anchor", "middle")
+            .style("font-size", "14px")
+            .text("Month");
+
+          svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -60)
+            .attr("x", -height/2)
+            .style("text-anchor", "middle")
+            .style("font-size", "14px")
+            .text("Sales ($)");
+        });
+      </script>
+    </section>
+  </div>
+<script>
+    // Function to toggle between pages
+    function showPage(pageId) {
+        const pages = document.querySelectorAll('.page');
+        const buttons = document.querySelectorAll('nav button');
+        
+        pages.forEach(page => {
+            page.classList.remove('active');
+        });
+        
+        buttons.forEach(button => {
+            button.classList.remove('active');
+        });
+        
+        document.getElementById(pageId).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    // Show/hide custom date range filter
+    const timePeriodSelect = document.getElementById('time-period');
+    const customRange = document.getElementById('custom-range');
+
+    timePeriodSelect.addEventListener('change', () => {
+        if (timePeriodSelect.value === 'custom') {
+            customRange.style.display = 'flex';
+        } else {
+            customRange.style.display = 'none';
+        }
+    });
+
+    // Placeholder for applying filters
+    document.getElementById('apply-filters').addEventListener('click', () => {
+        alert('Filters applied! (This is a placeholder action)');
+    });
+
+    // Fonction de gestion des filtres globaux
+    let globalData = [];
+    
+    // Charger les données initiales
+    d3.csv("Sample - Superstore.csv").then(function(data) {
+        globalData = data;
+        updateAllCharts(data);
+    });
+    
+    function filterData() {
+        let filteredData = [...globalData];
+        
+        // Filtrer par période
+        const timePeriod = document.getElementById('time-period').value;
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        
+        if (timePeriod !== 'all') {
+            const today = new Date();
+            let filterDate = new Date();
+            
+            switch(timePeriod) {
+                case 'year':
+                    filterDate.setFullYear(today.getFullYear() - 1);
+                    break;
+                case 'quarter':
+                    filterDate.setMonth(today.getMonth() - 3);
+                    break;
+                case 'month':
+                    filterDate.setMonth(today.getMonth() - 1);
+                    break;
+                case 'custom':
+                    if (startDate && endDate) {
+                        filteredData = filteredData.filter(d => {
+                            const date = new Date(d["Order Date"]);
+                            return date >= new Date(startDate) && date <= new Date(endDate);
+                        });
+                    }
+                    break;
+            }
+            
+            if (timePeriod !== 'custom') {
+                filteredData = filteredData.filter(d => new Date(d["Order Date"]) >= filterDate);
+            }
+        }
+        
+        // Filtrer par région
+        const region = document.getElementById('region-filter').value;
+        if (region !== 'all') {
+            filteredData = filteredData.filter(d => d.Region === region);
+        }
+        
+        // Filtrer par catégorie
+        const category = document.getElementById('category-filter').value;
+        if (category !== 'all') {
+            filteredData = filteredData.filter(d => d.Category === category);
+        }
+        
+        updateAllCharts(filteredData);
+    }
+    
+    // Fonction pour mettre à jour tous les graphiques
+    function updateAllCharts(data) {
+        updateKPIs(data);
+        updateCategoryPieChart(data);
+        updateSalesLineChart(data);
+        updateSubcategorySalesChart(data);
+        updateDayOfWeekHeatmap(data);
+        updateProfitTimeChart(data);
+        updateProfitMarginGauge(data);
+        updateProfitBubbleChart(data);
+        updateProfitCategoryChart(data);
+    }
+    
+    // Fonction pour mettre à jour les KPIs
+    function updateKPIs(data) {
+        const totalSales = d3.sum(data, d => +d.Sales);
+        const totalProfit = d3.sum(data, d => +d.Profit);
+        const profitMargin = (totalProfit / totalSales) * 100;
+        const avgOrder = totalSales / data.length;
+        
+        document.getElementById('total-sales').textContent = `$${d3.format(",.0f")(totalSales)}`;
+        document.getElementById('total-profit').textContent = `$${d3.format(",.0f")(totalProfit)}`;
+        document.getElementById('profit-margin').textContent = `${d3.format(".1f")(profitMargin)}%`;
+        document.getElementById('avg-order').textContent = `$${d3.format(",.1f")(avgOrder)}`;
+    }
+    
+    // Ajouter les écouteurs d'événements aux filtres
+    document.getElementById('time-period').addEventListener('change', filterData);
+    document.getElementById('start-date').addEventListener('change', filterData);
+    document.getElementById('end-date').addEventListener('change', filterData);
+    document.getElementById('region-filter').addEventListener('change', filterData);
+    document.getElementById('category-filter').addEventListener('change', filterData);
+    document.getElementById('apply-filters').addEventListener('click', filterData);
+    
+    // Fonction pour réinitialiser les filtres
+    function resetFilters() {
+        document.getElementById('time-period').value = 'all';
+        document.getElementById('region-filter').value = 'all';
+        document.getElementById('category-filter').value = 'all';
+        document.getElementById('custom-range').style.display = 'none';
+        filterData();
+    }
+    
+    // Ajouter un bouton de réinitialisation
+    document.querySelector('.dashboard-controls').insertAdjacentHTML('beforeend', `
+        <button id="reset-filters" style="align-self: flex-end;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4C7.58 4 4.01 7.58 4.01 12C4.01 16.42 7.58 20 12 20C15.73 20 18.84 17.45 19.73 14H17.65C16.83 16.33 14.61 18 12 18C8.69 18 6 15.31 6 12C6 8.69 8.69 6 12 6C13.66 6 15.14 6.69 16.22 7.78L13 11H20V4L17.65 6.35Z" fill="currentColor"/>
+            </svg>
+            Reset Filters
+        </button>
+    `);
+    
+    document.getElementById('reset-filters').addEventListener('click', resetFilters);
+</script>
+</body>
+<footer style="text-align: center; margin-top: 2rem; padding: 1rem 0; background: #1f2937; color: white; border-radius: 10px;">
+    <p style="margin-bottom: 0.5rem;">Superstore Dashboard © 2025</p>
+  </footer>
+</html>
