@@ -29,7 +29,3 @@ Pour exécuter ce projet, vous aurez besoin de :
 ## Structure des Données
 
 Le fichier `Sample - Superstore.csv` contient les données du supermarché, qui sont utilisées pour générer les visualisations interactives dans l'interface web.
-
-## Licence
-
-Ce projet est disponible sous licence MIT. 
